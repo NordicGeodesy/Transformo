@@ -1,0 +1,47 @@
+dev_addr: 127.0.0.1:8000
+
+site_name: Transformo
+
+nav:
+- Home: index.md
+- Installation: install.md
+- Using Transformo: usage.md
+- Datasources:
+  - datasources/index.md
+  - datasources/csv.md
+  - datasources/bernese_crd.md
+
+- For developers: developing.md
+
+theme:
+  name: material
+  language: en
+
+  palette:
+    - media: "(prefers-color-scheme)"
+      toggle:
+        icon: material/link
+        name: Switch to light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: brown #deep purple
+      accent: deep orange #light blue
+      toggle:
+        icon: material/toggle-switch
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: black
+      accent: orange
+      toggle:
+        icon: material/toggle-switch-off
+        name: Switch to system preference
+
+markdown_extensions:
+  - pymdownx.blocks.caption
+  - pymdownx.arithmatex:
+      generic: true
+
+extra_javascript:
+  - javascripts/mathjax.js
+  - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
