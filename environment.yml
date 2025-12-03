@@ -11,6 +11,7 @@ dependencies:
   - pyproj=3.7
   - pandoc=3.5
   - rich=13.9
+  - scipy=1.16
   - pip:
     - pandoc
     - py-markdown-table

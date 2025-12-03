@@ -25,6 +25,7 @@ Copyright &copy; Nordic Geodetic Commision
         "operators/projoperator.md",
         "operators/helmerttranslation.md",
         "operators/helmert7param.md",
+        "operators/helmert7paramnonlinear.md",
     ]},
     { "Presenters" = [
         "presenters/index.md",

@@ -4,7 +4,7 @@ The 7-parameter Helmert transformation performs a translation in the three princ
 
 ## Type
 
-`type: helmert_7param`
+`type: helmert_7param_linear`
 
 ## Options
 
@@ -25,7 +25,7 @@ The 7-parameter Helmert transformation performs a translation in the three princ
 ```yaml
 operators:
 - name: ITRF to ETRS89
-  type: helmert_7param
+  type: helmert_7param_linear
   convention: coordinate_frame
   small_angle_approximation: true
   x: 0.5

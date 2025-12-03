@@ -10,6 +10,7 @@ from functools import cached_property
 from typing import TYPE_CHECKING, Any, Literal, Optional
 
 import numpy as np
+import scipy.optimize
 from numpy import cos, sin
 
 from transformo._typing import CoordinateMatrix, Matrix, Vector
@@ -179,6 +180,15 @@ class RotationConvention(enum.Enum):
     COORDINATE_FRAME = "coordinate_frame"
 
 
+def rad2arcsec(rad) -> float:
+    return np.rad2deg(rad) * 3600
+
+
+def arcsec2rad(arcsec) -> float:
+    return np.deg2rad(arcsec / 3600)
+
+
+# All rotation matrices below follow POSITION_VECTOR
 # fmt: off
 def R1(rx: float) -> Matrix:
     """Rotation matrix for rotating about the x-axis."""
@@ -209,10 +219,8 @@ def R3(rz: float) -> Matrix:
             [      0,        0, 1],
         ]
     )
-# fmt: on
 
-
-class Helmert7Param(HelmertTranslation):
+class Helmert7ParamLinear(HelmertTranslation):
     """
     The 7 paramter Helmert transformation performs a translation in the three
     principal directions of a earth-centered, earth-fixed coordinate system (or
@@ -233,9 +241,9 @@ class Helmert7Param(HelmertTranslation):
     # a Literal["helmert_7param"], so we have it look the other
     # way for a brief moment when checking the types.
     if TYPE_CHECKING:
-        type: Any = "helmert_7param"
+        type: Any = "helmert_7param_linear"
     else:
-        type: Literal["helmert_7param"] = "helmert_7param"
+        type: Literal["helmert_7param_linear"] = "helmert_7param_linear"
 
     convention: RotationConvention
     small_angle_approximation: bool = True
@@ -309,9 +317,6 @@ class Helmert7Param(HelmertTranslation):
         Rotation matrix.
         """
 
-        def arcsec2rad(arcsec) -> float:
-            return np.deg2rad(arcsec) / 3600.0
-
         rx = arcsec2rad(self.rx)
         ry = arcsec2rad(self.ry)
         rz = arcsec2rad(self.rz)
@@ -374,16 +379,14 @@ class Helmert7Param(HelmertTranslation):
         Estimate parameters using small angle approximation.
         """
 
-        def rad2arcsec(rad) -> float:
-            return np.rad2deg(rad) * 3600
-
         # Build design matrix
         n = len(source_coordinates)
         A = np.zeros((n * 3, 7))
         for i, x in enumerate(source_coordinates):
-            # Note that the R components below appear to be the wrong rotation convention
-            # but when setting up the coeffecient matrix coeffecients have slightly different
-            # order, that ends up looking like the transposed rotation matrix.
+            # Note that the R components below appear to be the wrong rotation
+            # convention but when setting up the coeffecient matrix coeffecients
+            # have slightly different order, that ends up looking like the
+            # transposed rotation matrix.
             if self.convention == RotationConvention.POSITION_VECTOR:
                 R = np.array(
                     [
@@ -408,7 +411,6 @@ class Helmert7Param(HelmertTranslation):
 
         y = target_coordinates[:, 0:3].flatten()
 
-        # beta, _, _, _ = np.linalg.lstsq(A, b, rcond=None)
         beta = np.linalg.inv(A.T @ W @ A) @ A.T @ W @ y
 
         self.x = beta[0]
@@ -421,3 +423,175 @@ class Helmert7Param(HelmertTranslation):
         self.rx = rad2arcsec(beta[4] / k)
         self.ry = rad2arcsec(beta[5] / k)
         self.rz = rad2arcsec(beta[6] / k)
+
+
+class Helmert7ParamNonLinear(Helmert7ParamLinear):
+    """
+    The 7 paramter Helmert transformation performs a translation in the three
+    principal directions of a earth-centered, earth-fixed coordinate system (or
+    a similarly shaped celestial body), as well as rotations around those axes
+    and a scaling of the coordinates.
+
+    A coordinate in vector Va is transformed into vector Vb using the expression
+    below:
+
+        Vb = T + (1+s*10^-6) * R * Va
+
+    Where T consist of the three translation parameters, s is the scaling factor
+    and R is a rotation matrix. The principal components of T, s and R can be
+    estimated, resulting in three translations, three rotations and a scale factor.
+
+    Similar to `Helmert7ParamLinear` in most functionality but the parameter
+    estimation is different. Here estimation of the parameters is done using the
+    full rotation matrix which makes the inversion a non-linear problem. The
+    inversion is done using an iterative approach.
+    """
+
+    # mypy will complain since Helmert7Param defines this as
+    # a Literal["helmert_7param"], so we have it look the other
+    # way for a brief moment when checking the types.
+    if TYPE_CHECKING:
+        type: Any = "helmert_7param_nonlinear"
+    else:
+        type: Literal["helmert_7param_nonlinear"] = "helmert_7param_nonlinear"
+
+    def estimate(
+        self,
+        source_coordinates: CoordinateMatrix,
+        target_coordinates: CoordinateMatrix,
+        source_weights: CoordinateMatrix,
+        target_weights: CoordinateMatrix,
+    ) -> None:
+        """
+        Estimate parameters using the full rotation matrix.
+
+        The 7-parameter Helmert transformation relates source coordinates S to
+        target coordinates T through:
+
+            T = T_translation + (1 + s·10⁻⁶) · R · S
+
+        where:
+
+            - T_translation = (Tx, Ty, Tz): translation vector [meters]
+            - s: scale factor [parts per million, ppm]
+            - R = R₃(rz)·R₂(ry)·R₁(rx): rotation matrix composed of elementary
+              rotations about the x, y, and z axes (rx, ry, rz in radians)
+
+        The rotation matrix R is orthonormal and satisfies R·Rᵀ = I and det(R) = 1.
+        Due to the trigonometric functions in R, the relationship between coordinates
+        is inherently non-linear with respect to the rotation parameters.
+
+        Methodology
+        ----------
+
+        1. Coordinate Normalization (Centroid Estimation)
+           To improve numerical stability when solving the normal equations, the
+           coordinates are centered around their weighted centroids:
+
+               x̄ = Σ(wᵢ·xᵢ) / Σ(wᵢ)
+               ȳ = Σ(wᵢ·yᵢ) / Σ(wᵢ)
+               z̄ = Σ(wᵢ·zᵢ) / Σ(wᵢ)
+
+           The normalized coordinates are:
+               X = S - x̄   (source coordinates centered)
+               Y = T - ȳ   (target coordinates centered)
+
+           This transformation to a local reference frame avoids numerical issues
+           that arise from the large magnitude of geodetic coordinates (typically
+           3-7 million meters for Earth-centered coordinates).
+
+        2. Non-linear Least Squares Formulation
+           The transformation model in normalized coordinates becomes:
+
+               Y = t + k·X·Rᵀ + ε
+
+           where:
+               - t = (Tx, Ty, Tz): translation in normalized space
+               - k = 1 + s·10⁻⁶: scale factor
+               - ε: residual vector
+
+           The unknown parameter vector is β = [Tx, Ty, Tz, k, rx, ry, rz]ᵀ.
+
+        3. Residual Function
+           For a given parameter vector β, the residual vector is:
+
+               r(β) = Y - (t + k·X·Rᵀ)
+
+           where R = R₃(rz)·R₂(ry)·R₁(rx) uses the full rotation matrix
+           (not the small-angle approximation).
+
+        4. Iterative Solution (Levenberg-Marquardt)
+           The minimization problem min ||r(β)||² is solved using the
+           Levenberg-Marquardt algorithm (implemented in
+           scipy.optimize.least_squares with method='lm'). This method:
+
+           - Combines the Gauss-Newton method with gradient descent
+           - Provides robust convergence for non-linear problems
+           - Does not require analytical Jacobian computation (though it can
+             be provided for efficiency)
+
+           The initial parameter guess is:
+               β₀ = [0, 0, 0, 1, 0, 0, 0]ᵀ
+           (identity transformation: no translation, unit scale, no rotation)
+
+        5. Coordinate System Transformation
+           After convergence, the translation parameters in normalized space (t)
+           are transformed back to the original coordinate system:
+
+               T_orig = t - k·R·x̄ + ȳ
+
+           This accounts for the centroid offset introduced in step 1.
+
+        6. Parameter Extraction
+           The final transformation parameters are:
+               - Tx, Ty, Tz: translation components [meters]
+               - s = (k - 1)·10⁶: scale factor [ppm]
+               - rx, ry, rz: rotation angles converted to arc-seconds
+        """
+
+        x0 = np.average(source_coordinates[:, 0:3], axis=0, weights=source_weights)
+        y0 = np.average(target_coordinates[:, 0:3], axis=0, weights=target_weights)
+
+        X = source_coordinates[:, 0:3] - x0
+        Y = target_coordinates[:, 0:3] - y0
+
+        weights = source_weights.flatten()
+
+        def residual(beta: Vector) -> Vector:
+            t = beta[0:3]
+            k = beta[3]
+            rx, ry, rz = beta[4:7]
+
+            R = R3(rz) @ R2(ry) @ R1(rx)
+
+            yk = t + k * X @ R.T
+
+            r = (Y - yk).flatten()
+            return r * np.sqrt(weights)
+
+        beta0 = np.array([0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0])
+
+        result = scipy.optimize.least_squares(
+            residual,
+            beta0,
+            method="lm",
+        )
+
+        beta = result.x
+
+        x, y, z, k = beta[0:4]
+        rx, ry, rz = beta[4:7]
+
+        R = R3(rz) @ R2(ry) @ R1(rx)
+        t_norm = np.array([x, y, z])
+        t_orig = t_norm - k * R @ x0 + y0
+
+        self.x = t_orig[0]
+        self.y = t_orig[1]
+        self.z = t_orig[2]
+
+        self.s = (k - 1) * 1e6
+
+        self.rx = rad2arcsec(rx)
+        self.ry = rad2arcsec(ry)
+        self.rz = rad2arcsec(rz)
