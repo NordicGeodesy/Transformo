@@ -1,0 +1,124 @@
+[project]
+site_name = "Transformo"
+site_description = "Documentation for Transformo"
+site_author = "Kristian Evers"
+
+copyright = """
+Copyright &copy; Nordic Geodetic Commision
+"""
+
+ nav = [
+    { "Home" = "index.md" },
+    { "Getting Started" = [
+        "about/install.md",
+        "about/usage.md",
+        "about/architecture.md",
+        "about/examples.md",
+    ]},
+    { "DataSources" = [
+        "datasources/index.md",
+        "datasources/csv.md",
+        "datasources/bernese_crd.md",
+    ]},
+    { "Operators" = [
+        "operators/index.md",
+        "operators/projoperator.md",
+        "operators/helmerttranslation.md",
+        "operators/helmert7param.md",
+    ]},
+    { "Presenters" = [
+        "presenters/index.md",
+        "presenters/datasource_presenter.md",
+        "presenters/coordinate_presenter.md",
+        "presenters/residual_presenter.md",
+        "presenters/topocentricresidual_presenter.md",
+        "presenters/proj_presenter.md",
+    ]},
+    { "For developers" = "developing.md"},
+ ]
+
+extra_javascript = [
+    "javascripts/mathjax.js",
+    "https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js",
+]
+
+[project.theme]
+#variant = "classic"
+language = "en"
+
+features = [
+    "announce.dismiss",
+    #"content.action.edit",
+    #"content.action.view",
+    "content.code.annotate",
+    "content.code.copy",
+    "content.code.select",
+    "content.footnote.tooltips",
+    "content.tabs.link",
+    "content.tooltips",
+    # "header.autohide",
+    # "navigation.expand",
+    "navigation.footer",
+    "navigation.indexes",
+    "navigation.instant",
+    "navigation.instant.prefetch",
+    #"navigation.instant.progress",
+    "navigation.path",
+    #"navigation.prune",
+    "navigation.sections",
+    #"navigation.tabs",
+    #"navigation.tabs.sticky",
+    "navigation.top",
+    "navigation.tracking",
+    "search.highlight",
+    # "toc.follow",
+    #"toc.integrate",
+]
+
+
+
+[[project.theme.palette]]
+scheme = "default"
+toggle.icon = "lucide/sun"
+toggle.name = "Switch to dark mode"
+
+[[project.theme.palette]]
+scheme = "slate"
+toggle.icon = "lucide/moon"
+toggle.name = "Switch to light mode"
+
+
+
+# ----------------------------------------------------------------------------
+# Markdown extenstions
+# ----------------------------------------------------------------------------
+[project.markdown_extensions.pymdownx.blocks.caption]
+
+[project.markdown_extensions.pymdownx.arithmatex]
+generic = true
+
+[project.markdown_extensions.pymdownx.highlight]
+anchor_linenums = true
+
+[project.markdown_extensions.pymdownx.inlinehilite]
+
+[project.markdown_extensions.pymdownx.snippets]
+
+[project.markdown_extensions.pymdownx.superfences]
+custom_fences = [
+  { name = "mermaid", class = "mermaid", format = "pymdownx.superfences.fence_code_format" },
+  { name = "python", class = "python", validator = "markdown_exec.validator", format = "markdown_exec.formatter" },
+  { name = "cmd", class = "cmd", validator = "markdown_exec.validator", format = "markdown_exec.formatter" }
+]
+
+[project.markdown_extensions.pymdownx.tabbed]
+alternate_style = true
+
+[project.markdown_extensions.admonition]
+
+[project.markdown_extensions.pymdownx.details]
+
+[project.markdown_extensions.toc]
+toc_depth = 2
+
+[project.markdown_extensions.attr_list]
