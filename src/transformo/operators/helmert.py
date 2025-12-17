@@ -267,6 +267,31 @@ def dR3(rx: float, ry: float, rz: float) -> Matrix:
 # fmt: on
 
 
+def nollapi(ang):
+    ang1 = float(ang)
+
+    if ang1 > math.pi or ang1 < -math.pi:
+        while ang1 <= -math.pi or ang1 > math.pi:
+            if ang1 <= -math.pi:
+                ang1 += 2 * math.pi
+            elif ang1 > math.pi:
+                ang1 -= 2 * math.pi
+
+    kulma = ang1
+    return kulma
+
+
+def normalize_angle(angle: float) -> float:
+    """
+    Normalize a radian value so it falls within -pi and pi.
+    """
+    # return angle
+    if False:
+        return (angle + np.pi) % (2 * np.pi) - np.pi
+    else:
+        return nollapi(angle)
+
+
 class Helmert7ParamLinear(HelmertTranslation):
     """
     The 7 paramter Helmert transformation performs a translation in the three
@@ -505,141 +530,6 @@ class Helmert7ParamNonLinear(Helmert7ParamLinear):
     else:
         type: Literal["helmert_7param_nonlinear"] = "helmert_7param_nonlinear"
 
-    def estimate_new(
-        self,
-        source_coordinates: CoordinateMatrix,
-        target_coordinates: CoordinateMatrix,
-        source_weights: CoordinateMatrix,
-        target_weights: CoordinateMatrix,
-    ) -> None:
-        """
-        Estimate parameters using the full rotation matrix.
-
-        n = number of coordinate values
-        m = number of parameters
-        Jacobian: size n x m
-
-        Approach:
-
-        1. Determine first guess
-        2. iterate k times
-            a. Build Jacobian matrix (iterate over coordinates)
-            b. Setup normal equations
-            c. Find solution to normal equations, i.e.
-        5.
-
-        Notes for Pasi's code:
-
-        Variable translator:
-
-        Pasi            Kristian
-        ----            --------
-        deltax          beta
-        ex              rx
-        ey              ry
-        ez              rz
-        A               J
-        """
-
-        def log_parameters(beta: Vector, n: int) -> None:
-            fmt = "-8.5f"
-            t = beta[4:7]
-            k = beta[0]
-            rx = rad2arcsec(beta[1])
-            ry = rad2arcsec(beta[2])
-            rz = rad2arcsec(beta[3])
-            log_params = f"{n: 3d}: "
-            log_params += f"x={t[0]:{fmt}} y={t[1]:{fmt}} z={t[2]:{fmt}} "
-            log_params += f"s={(k - 1) * 1e6:{fmt}} rx={rx:{fmt}} "
-            log_params += f"ry={ry:{fmt}} rz={rz:{fmt}}"
-            logger.info(log_params)
-
-        def jacobian(beta: Vector, x: Matrix, y: Matrix, **kwargs) -> Vector:
-            t = beta[4:7]
-            k = beta[0]
-            rx = beta[1]
-            ry = beta[2]
-            rz = beta[3]
-
-            # set up rotation matrix and its derivatives
-            R = R3(rz) * R2(ry) * R1(rx)
-            dRx = dR1(rx, ry, rz)
-            dRy = dR2(rx, ry, rz)
-            dRz = dR3(rx, ry, rz)
-
-            n, m = x.shape
-            # Jacobian. 7 parameters, n coordinates of 3 values each
-            J = np.zeros((3 * n, 7))
-            for i in range(n):
-                # xi = x[i * 3 : i * 3 + 3]
-                xi = x[i, 0:3]
-
-                J[i * 3 : i * 3 + 3, :] = np.column_stack(
-                    [R @ xi, k * dRx @ xi, k * dRy @ xi, k * dRz @ xi, np.eye(3)]
-                )
-
-            return -J
-
-        def residual(beta: Vector, x: Matrix, y: Matrix, **kwargs) -> Vector:
-            t = beta[4:7]
-            k = beta[0]
-            rx = beta[1]
-            ry = beta[2]
-            rz = beta[3]
-
-            # set up rotation matrix and its derivatives
-            R = R3(rz) * R2(ry) * R1(rx)
-
-            # forward calculation with current parameters
-            yk = k * x[:, 0:3] @ R + t
-
-            return (y[:, 0:3] - yk).flatten()
-
-        # prepare data
-        n = len(source_coordinates)
-        W = np.eye(n * 3) * source_weights.flatten()
-
-        # initial guesses
-        x0 = np.average(source_coordinates[:, 0:3], axis=0, weights=source_weights)
-        y0 = np.average(target_coordinates[:, 0:3], axis=0, weights=target_weights)
-        t0 = y0 - x0
-
-        # initial parameter guess
-        # beta = np.array([t0[0], t0[1], t0[2], 1, 0, 0, 0])
-        beta = np.array([1.0, 0.0, 0.0, 0.0, t0[0], t0[1], t0[2]])
-
-        print(residual(beta, source_coordinates, target_coordinates))
-
-        log_parameters(beta, 0)
-
-        result = scipy.optimize.least_squares(
-            fun=residual,
-            x0=beta,
-            args=(source_coordinates, target_coordinates),
-            xtol=1e-12,
-            jac=jacobian,
-            # method='lm',  # Levenberg-Marquardt
-            bounds=(
-                (0.9, arcsec2rad(-1), arcsec2rad(-1), arcsec2rad(-1), -1, -1, -1),
-                (1.1, arcsec2rad(1), arcsec2rad(1), arcsec2rad(1), 1, 1, 1),
-            ),
-        )
-
-        log_parameters(result.x, 1)
-
-        print(result)
-
-        self.x = beta[4]
-        self.y = beta[5]
-        self.z = beta[6]
-
-        k = beta[0]
-        self.s = (k - 1) * 1e6  # [ppm]
-
-        self.rx = rad2arcsec(beta[1])
-        self.ry = rad2arcsec(beta[2])
-        self.rz = rad2arcsec(beta[3])
-
     def estimate(
         self,
         source_coordinates: CoordinateMatrix,
@@ -649,40 +539,15 @@ class Helmert7ParamNonLinear(Helmert7ParamLinear):
     ) -> None:
         """
         Estimate parameters using the full rotation matrix.
-
-        n = number of coordinate values
-        m = number of parameters
-        Jacobian: size n x m
-
-        Approach:
-
-        1. Determine first guess
-        2. iterate k times
-            a. Build Jacobian matrix (iterate over coordinates)
-            b. Setup normal equations
-            c. Find solution to normal equations, i.e.
-        5.
-
-        Notes for Pasi's code:
-
-        Variable translator:
-
-        Pasi            Kristian
-        ----            --------
-        deltax          beta
-        ex              rx
-        ey              ry
-        ez              rz
-        A               J
         """
 
         def log_parameters(beta: Vector, n: int) -> None:
-            fmt = "-8.5f"
+            fmt = "-7.3f"
             t = beta[0:3]
             k = beta[3]
-            rx = rad2arcsec(beta[4])
-            ry = rad2arcsec(beta[5])
-            rz = rad2arcsec(beta[6])
+            rx = rad2arcsec(normalize_angle(beta[4]))
+            ry = rad2arcsec(normalize_angle(beta[5]))
+            rz = rad2arcsec(normalize_angle(beta[6]))
             log_params = f"{n: 3d}: "
             log_params += f"x={t[0]:{fmt}} y={t[1]:{fmt}} z={t[2]:{fmt}} "
             log_params += f"s={(k - 1) * 1e6:{fmt}} rx={rx:{fmt}} "
@@ -691,22 +556,22 @@ class Helmert7ParamNonLinear(Helmert7ParamLinear):
 
         n = len(source_coordinates)
 
-        # prepare data
-        x = source_coordinates[:, 0:3].flatten()
-        W = np.eye(n * 3) * source_weights.flatten()
-
         # initial guesses
         x0 = np.average(source_coordinates[:, 0:3], axis=0, weights=source_weights)
         y0 = np.average(target_coordinates[:, 0:3], axis=0, weights=target_weights)
         t0 = y0 - x0
 
+        # prepare data
+        x = (source_coordinates[:, 0:3]).flatten()
+
         # initial parameter guess
-        beta = np.array([t0[0], t0[1], t0[2], 1, 0, 0, 0])
-        # beta = np.array([0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0])
+        # beta = np.array([t0[0], t0[1], t0[2], 1, 0, 0, 0])
+        beta = np.array([0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0])
+        dbeta = np.zeros([7])
 
         log_parameters(beta, 0)
 
-        for j in range(3):
+        for j in range(5):
             t = beta[0:3]
             k = beta[3]
             rx = beta[4]
@@ -723,7 +588,11 @@ class Helmert7ParamNonLinear(Helmert7ParamLinear):
             yk = t + k * source_coordinates[:, 0:3] @ R.T
 
             # residual vector
-            delta_y = (target_coordinates[:, 0:3] - yk).flatten()
+            r = (target_coordinates[:, 0:3] - yk).flatten()
+            norm_r = np.linalg.norm(r, ord=np.inf) / len(r)
+            norm_dbeta = np.linalg.norm(dbeta, ord=np.inf) / len(dbeta)
+            print(norm_r, norm_dbeta)
+            print([f"{float(b):.3e}" for b in dbeta])
 
             # Jacobian. 7 parameters, n coordinates of 3 values each
             J = np.zeros((3 * n, 7))
@@ -735,31 +604,21 @@ class Helmert7ParamNonLinear(Helmert7ParamLinear):
                 )
 
             # solve normal equations
-            delta_beta = np.linalg.inv(J.T @ J) @ J.T @ delta_y
-            beta += delta_beta
-            # beta += np.linalg.lstsq(J, delta_y, rcond=None)[0]
-
-            # check for convergence
-            print("delta")
-            print(delta_beta)
-            print("beta")
-            print(beta)
+            dbeta = np.linalg.inv(J.T @ J) @ J.T @ r
+            beta += dbeta
 
             log_parameters(beta, j + 1)
 
-            # if translation_convergence & rotation_convergence:
-            #    break
+        self.x = beta[0]
+        self.y = beta[1]
+        self.z = beta[2]
 
-        self.x = beta[4]
-        self.y = beta[5]
-        self.z = beta[6]
-
-        k = beta[0]
+        k = beta[3]
         self.s = (k - 1) * 1e6  # [ppm]
 
-        self.rx = rad2arcsec(beta[1])
-        self.ry = rad2arcsec(beta[2])
-        self.rz = rad2arcsec(beta[3])
+        self.rx = rad2arcsec(normalize_angle(beta[4]))
+        self.ry = rad2arcsec(normalize_angle(beta[5]))
+        self.rz = rad2arcsec(normalize_angle(beta[6]))
 
 
 # Prøv en helt frisk implementering baseret på scipy.optimize.least_squares()
