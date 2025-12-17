@@ -548,35 +548,46 @@ class Helmert7ParamNonLinear(Helmert7ParamLinear):
             rx = rad2arcsec(normalize_angle(beta[4]))
             ry = rad2arcsec(normalize_angle(beta[5]))
             rz = rad2arcsec(normalize_angle(beta[6]))
+
             log_params = f"{n: 3d}: "
             log_params += f"x={t[0]:{fmt}} y={t[1]:{fmt}} z={t[2]:{fmt}} "
             log_params += f"s={(k - 1) * 1e6:{fmt}} rx={rx:{fmt}} "
             log_params += f"ry={ry:{fmt}} rz={rz:{fmt}}"
             logger.info(log_params)
 
-        n = len(source_coordinates)
+        def prepare_parameters(beta: Vector, x0: Vector) -> Vector:
+            # beta[4:7] /= 1000
+            x, y, z, k = beta[0:4]
+            rx = beta[4] / 1000
+            ry = beta[5] / 1000
+            rz = beta[6] / 1000
 
-        # initial guesses
-        x0 = np.average(source_coordinates[:, 0:3], axis=0, weights=source_weights)
-        y0 = np.average(target_coordinates[:, 0:3], axis=0, weights=target_weights)
-        t0 = y0 - x0
+            return np.array([x, y, z, k, rx, ry, rz])
 
-        # prepare data
-        x = (source_coordinates[:, 0:3]).flatten()
+            tc = beta[0:3]
+            s, rx, ry, rz = beta[3:7]
+            R = R3(rz) @ R2(ry) @ R1(rx)
+            t = tc + s * R @ x0 - x0
 
-        # initial parameter guess
-        # beta = np.array([t0[0], t0[1], t0[2], 1, 0, 0, 0])
-        beta = np.array([0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0])
-        dbeta = np.zeros([7])
+            return np.array([*t, s, rx, ry, rz])
 
-        log_parameters(beta, 0)
-
-        for j in range(5):
+        def residual(beta: Vector, X: Matrix, Y: Matrix) -> Vector:
             t = beta[0:3]
             k = beta[3]
-            rx = beta[4]
-            ry = beta[5]
-            rz = beta[6]
+            rx, ry, rz = beta[4:7] / 1000
+
+            # set up rotation matrix
+            R = R3(rz) * R2(ry) * R1(rx)
+
+            # forward calculation with current parameters
+            yk = t + k * X @ R.T
+
+            # return residual vector
+            return (Y - yk).flatten()
+
+        def jacobian(beta: Vector, X: Matrix) -> Matrix:
+            k = beta[3]
+            rx, ry, rz = beta[4:7] / 1000
 
             # set up rotation matrix and its derivatives
             R = R3(rz) * R2(ry) * R1(rx)
@@ -584,30 +595,61 @@ class Helmert7ParamNonLinear(Helmert7ParamLinear):
             dRy = dR2(rx, ry, rz)
             dRz = dR3(rx, ry, rz)
 
-            # forward calculation with current parameters
-            yk = t + k * source_coordinates[:, 0:3] @ R.T
-
-            # residual vector
-            r = (target_coordinates[:, 0:3] - yk).flatten()
-            norm_r = np.linalg.norm(r, ord=np.inf) / len(r)
-            norm_dbeta = np.linalg.norm(dbeta, ord=np.inf) / len(dbeta)
-            print(norm_r, norm_dbeta)
-            print([f"{float(b):.3e}" for b in dbeta])
-
             # Jacobian. 7 parameters, n coordinates of 3 values each
             J = np.zeros((3 * n, 7))
-            for i in range(n):
-                xi = x[i * 3 : i * 3 + 3]
+            for i in range(len(X)):
+                xi = X[i, :]
 
                 J[i * 3 : i * 3 + 3, :] = np.column_stack(
-                    [np.eye(3), R @ xi, k * dRx @ xi, k * dRy @ xi, k * dRz @ xi]
+                    [
+                        np.eye(3),
+                        R @ xi,
+                        k * dRx @ xi * 1000,
+                        k * dRy @ xi * 1000,
+                        k * dRz @ xi * 1000,
+                    ]
                 )
+
+            return J
+
+        n = len(source_coordinates)
+
+        # prepare data
+        x0 = np.average(source_coordinates[:, 0:3], axis=0, weights=source_weights)
+        X = source_coordinates[:, 0:3]  # - x0
+        Y = target_coordinates[:, 0:3]  # - x0
+
+        # initial parameter guess
+        beta = np.array([0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0])
+        # beta = np.array([*x0, 1.0, 0.0, 0.0, 0.0])
+        dbeta = np.zeros([7])
+
+        tol = 1e-15
+        lm = 1e-10
+
+        for j in range(5):
+            r = residual(beta, X, Y)
+            J = jacobian(beta, X)
 
             # solve normal equations
             dbeta = np.linalg.inv(J.T @ J) @ J.T @ r
+            # dbeta = np.linalg.inv(J.T @ J + lm * np.eye(7)) @ J.T @ r
+
+            r_new = residual(beta + dbeta, X, Y)
             beta += dbeta
 
-            log_parameters(beta, j + 1)
+            # if np.linalg.norm(r_new) <= np.linalg.norm(r):
+            #    lm /= 10  # Reducer lambda, hvis det går godt
+            #    beta += dbeta
+            # else:
+            #    lm *= 10  # Forøg lambda, hvis det går dårligt
+
+            # if np.linalg.norm(dbeta) < tol:
+            #    break
+
+            log_parameters(prepare_parameters(beta, x0), j + 1)
+
+        beta = prepare_parameters(beta, x0)
 
         self.x = beta[0]
         self.y = beta[1]
@@ -619,6 +661,3 @@ class Helmert7ParamNonLinear(Helmert7ParamLinear):
         self.rx = rad2arcsec(normalize_angle(beta[4]))
         self.ry = rad2arcsec(normalize_angle(beta[5]))
         self.rz = rad2arcsec(normalize_angle(beta[6]))
-
-
-# Prøv en helt frisk implementering baseret på scipy.optimize.least_squares()
