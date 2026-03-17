@@ -13,6 +13,7 @@ Copyright &copy; Nordic Geodetic Commision
         "about/install.md",
         "about/usage.md",
         "about/architecture.md",
+        "about/usecases.md",
         "about/examples.md",
     ]},
     { "DataSources" = [

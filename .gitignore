@@ -121,5 +121,4 @@ venv.bak/
 transformo_results/
 *.html
 *.pdf
-*.png
 notes.md
