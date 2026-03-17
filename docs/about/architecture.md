@@ -4,9 +4,10 @@ Transformo is built using a pipeline architecture that revolves around three typ
 components: *DataSources*, *Operators* and *Presenters*.
 
 A number of DataSources can be
-fed to a pipeline of Operators, that defines the desired transformation to estimate
+fed to a series of Operators, that defines the desired transformation to estimate
 parameters for, and the resulting parameters and related statistics are returned using
-Presenters. The figure below give a schematic overview of the concept.
+Presenters. The combination of DataSources, Operators and Presenters are called a "Pipeline".
+The figure below give a schematic overview of the concept.
 
 
 ```mermaid
@@ -34,7 +35,7 @@ flowchart TD
     end
         T_C[TargetDataSource] --> O_1
 
-    subgraph Pipeline
+    subgraph Transformation
         O_1[Operator 1] --> O_2[Operator 2]
         O_2 --> O_3[...]
         O_3 --> O_N[Operator N]

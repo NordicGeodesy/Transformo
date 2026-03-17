@@ -18,6 +18,7 @@ ETRS89. Transformation parameters are only derived for the latter part. Here the
 method is demonstrated for Denmark but the principle is shared between all seven
 countries involved.
 
+<center>
 ```mermaid
 ---
 config:
@@ -47,14 +48,19 @@ flowchart
         A7
     end
 ```
-*Figure 1. Schematic overview of the transformation. On the left the setup is given in terms of the used
+<i>Figure 1. Schematic overview of the transformation. On the left the setup is given in terms of the used
 Transformo components and on the right the transformation steps and intermediate reference frames and
-epochs are displayed.*
+epochs are displayed.</i>
+</center>
 
-The schematics of Figure 1 is expressed as a Transformo configuration below. Note the
+The schematics of Figure 1 is expressed as a Transformo pipeline below. Note the
 pre-processing command, that ensure that PROJ has access to the NKG deformation model.
 The source and target data is supplied in CSV-files with only station names and coordinates
-available, so in both cases an epoch and uncertainties are supplied.
+available, so in both cases an epoch and uncertainties are supplied. The uncertainties are
+set to 0 in this case, meaning that these are defining coordinates with no uncertainty.
+This equals the approach used for the NKG2020 transformations. The ITRF2014-coordinates
+are not defining the frame though, so a fairer approach would be to include uncertainty
+estimates for those.
 
 ```yaml
 pre_processing_commands:
@@ -114,7 +120,7 @@ presenters:
   name: PROJ String
 ```
 
-The configuration is processed by running
+The pipeline is processed by running
 
 ```
 $ transformo --markdown --report-in-terminal recreate_nkg2020_dk.yaml

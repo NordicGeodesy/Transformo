@@ -9,7 +9,7 @@ in the terminal or saved to a file in various formats.
 Here's an example:
 
 ```sh
-transformo pipeline.yaml --pdf pipeline.yaml
+transformo --pdf pipeline.yaml
 ```
 
 which will produce a PDF-file with the results of the processed pipeline.
@@ -34,7 +34,7 @@ presenters:
   type: coordinate_presenter
 ```
 
-Note that some pipeline entries are named and some aren't. The name attribute
+Note that some components are named and some aren't. The name attribute
 is optional but are useful when working with bigger pipelines. For named
 presenters the name will used as section headers for the presenter output in the
 report.
