@@ -1,6 +1,10 @@
 # For developers
 
-This section is only relevant for developers working on the software.
+This section is only relevant for developers working on the software. The code
+is kept in a git repository on GitHub under the Nordic Geodetic Commisions organisation.
+
+Find the repository here:
+[github.com/NordicGeodesy/Transformo](https://github.com/NordicGeodesy/Transformo).
 
 ## Installation
 

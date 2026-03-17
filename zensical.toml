@@ -36,7 +36,11 @@ Copyright &copy; Nordic Geodetic Commision
         "presenters/topocentricresidual_presenter.md",
         "presenters/proj_presenter.md",
     ]},
-    { "For developers" = "developing.md"},
+    { "Contributing" = [
+        "contributing/index.md",
+        "contributing/developing.md",
+        "contributing/documentation.md",
+    ]},
  ]
 
 extra_javascript = [
