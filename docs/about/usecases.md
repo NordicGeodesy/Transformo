@@ -7,7 +7,7 @@ on producing geodetic transformations between ITRS and ETRS89. The collaboration
 focuses on producing transformations that account for the significant GIA signal
 observed across the region. The transformations are collectively known as the
 "NKG Transformations" and so far they exist in two versions. The first is based
-on a GPS campaign from 2008 (Häkli et al, 2016) and the second presents and update
+on a GPS campaign from 2008 (Häkli et al, 2016) and the second presents an update
 based on data from 2020 (Häkli et al, 2023). In the following it is demonstrated
 how to recreate the results of the NKG2020 transformations using Transformo.
 
