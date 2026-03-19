@@ -7,7 +7,7 @@ build-backend = 'setuptools.build_meta'
 
 [project]
 name = 'transformo'
-version = '0.2.0'
+version = '0.3.0'
 description = 'Transformo - The general purpose tool for determining geodetic transformations'
 readme = 'README.md'
 license = 'MIT'
@@ -52,9 +52,9 @@ dev = [
 transformo = 'cli.entries:main'
 
 [project.urls]
-Documentation = 'https://github.com/kbevers/transformo'
-Repository = 'https://github.com/kbevers/transformo'
-Tracker = 'https://github.com/kbevers/transformo/issues'
+Documentation = 'https://transformo.xyz'
+Repository = 'https://github.com/NordicGeodesy/transformo'
+Tracker = 'https://github.com/NordicGeodesy/transformo/issues'
 
 [tool.setuptools.packages.find]
 where = ['src', 'src/transformo']
@@ -76,7 +76,7 @@ include = '\.pyi?$'
 profile = 'black'
 
 [tool.pylint.main]
-py-version = '3.12'
+py-version = '3.14'
 source-roots = ['src/transformo']
 
 [tool.pylint.format]
