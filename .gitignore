@@ -122,3 +122,4 @@ transformo_results/
 *.html
 *.pdf
 notes.md
+!uv.lock

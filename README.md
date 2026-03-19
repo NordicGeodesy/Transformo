@@ -48,13 +48,13 @@ they can focus on the core algorithms and not the supporting scaffolding.
 
 ## Installation
 
-Transformo is best run in a Conda environment. Clone the repository from GitHub
+Transformo is best run using [uv](https://github.com/astral-sh/uv). Clone the repository from GitHub
 and run the following commands in the root:
 
 ```sh
-mamba env create -f environment.yml
-mamba activate transformo
-pip install .
+uv venv .venv
+source .venv/bin/activate
+uv pip install .
 ```
 
 ## Using Transformo
@@ -193,16 +193,15 @@ The installation process is similar to the one for regular users,
 although the installed Python environment includes essential tools
 for development as well:
 
-```
-mamba env create -f environment-dev.yml
-mamba activate transformo-dev
-pip install -e .
+```sh
+uv sync --dev
 ```
 
 On top of setting up a Python environment and installing the package
 developers also need to set up pre-commit scripts for git:
 
-```
+```sh
+uv sync --dev
 pre-commit install
 ```
 

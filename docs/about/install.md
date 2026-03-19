@@ -11,22 +11,22 @@ command line is expected.
 
 ## Prerequisites
 
-You'll need git and a working Conda setup to proceed with the installation.
-If you haven't got either already, start på downloading and installing
+You'll need git and [uv](https://github.com/astral-sh/uv) to proceed with the installation.
+If you haven't got either already, start by downloading and installing
 [git](https://git-scm.com/install/windows) and
-[Miniforge](https://conda-forge.org/download/).
+[uv](https://github.com/astral-sh/uv).
 
 ## Setup
 
-Transformo is best run in a Conda environment. Clone the repository from GitHub
+Transformo is best run using uv. Clone the repository from GitHub
 and run the following commands in a suitable location:
 
 ```sh
 $ git clone https://github.com/NordicGeodesy/Transformo.git
 $ cd Transformo
-$ mamba env create -f environment.yml
-$ mamba activate transformo
-$ pip install .
+$ uv venv .venv
+$ source .venv/bin/activate
+$ uv pip install .
 ```
 
 Verify the installation by running a transformo command:
