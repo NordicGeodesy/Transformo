@@ -12,16 +12,14 @@ The installation process is similar to the one for regular users,
 although the installed Python environment includes essential tools
 for development as well:
 
-```
-mamba env create -f environment-dev.yml
-mamba activate transformo-dev
-pip install -e .
+```sh
+uv sync --dev
 ```
 
 On top of setting up a Python environment and installing the package
 developers also need to set up pre-commit scripts for git:
 
-```
+```sh
 pre-commit install
 ```
 
