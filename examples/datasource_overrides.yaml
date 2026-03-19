@@ -56,7 +56,7 @@ target_data:
 
 operators:
 - name: Helmert 3 Parameter Estimation
-  type: helmert_translation
+  type: helmert_3param
 
 presenters:
 - type: datasource_presenter

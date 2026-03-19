@@ -11,9 +11,10 @@ from transformo.core import Operator
 from transformo.datatypes import Parameter
 
 from .helmert import (
-    Helmert7ParamLinear,
-    Helmert7ParamNonLinear,
-    HelmertTranslation,
+    Helmert3Param,
+    Helmert7Param,
+    Helmert7ParamBase,
+    Helmert7ParamSmallAngle,
     RotationConvention,
 )
 from .proj import ProjOperator
@@ -21,9 +22,9 @@ from .proj import ProjOperator
 __all__ = [
     "Operator",
     "DummyOperator",
-    "HelmertTranslation",
-    "Helmert7ParamLinear",
-    "Helmert7ParamNonLinear",
+    "Helmert3Param",
+    "Helmert7Param",
+    "Helmert7ParamSmallAngle",
     "RotationConvention",
     "ProjOperator",
 ]

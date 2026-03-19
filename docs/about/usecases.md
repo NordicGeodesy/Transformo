@@ -44,7 +44,7 @@ flowchart
         A2["Source DataSource"] -->|"<i>ProjOperator(helmert)</i>"| A3["Intermediate result 1"]
         A3 -->|"<i>ProjOperator(deformation)</i>"| A4["Intermediate result 2"]
         A4 -->|"<i>ProjOperator(deformation)</i>"| A6["Intermediate result 3"]
-        A6 -- "<b>Helmert7ParamNonLinear</b>" --> A7["Target DataSource"]
+        A6 -- "<b>Helmert7Param</b>" --> A7["Target DataSource"]
         A7
     end
 ```
@@ -107,7 +107,7 @@ operators:
                +dt=15.829 +ellps=GRS80
 
 - name: NKG_ETRF14@2000.0 to ETRF92@2000.0
-  type: helmert_7param_nonlinear
+  type: helmert_7param
   convention: position_vector
   small_angle_approximation: false
 

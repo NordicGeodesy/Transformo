@@ -7,17 +7,18 @@ import pytest
 
 from transformo.datatypes import Parameter
 from transformo.operators import (
-    Helmert7ParamLinear,
-    Helmert7ParamNonLinear,
-    HelmertTranslation,
+    Helmert3Param,
+    Helmert7Param,
+    Helmert7ParamBase,
+    Helmert7ParamSmallAngle,
     RotationConvention,
 )
 from transformo.transformer import Transformer
 
 
-def test_helmerttranslation_can_estimate():
+def test_helmert3param_can_estimate():
     """Check if the two principal modes of operation can be invoked."""
-    helmert_with_no_parameters = HelmertTranslation(name="anything_really")
+    helmert_with_no_parameters = Helmert3Param(name="anything_really")
 
     assert helmert_with_no_parameters.can_estimate is True
 
@@ -26,7 +27,7 @@ def test_helmerttranslation_can_estimate():
     assert np.sum(helmert_with_no_parameters.T) == 0.0
     assert helmert_with_no_parameters._transformation_parameters_given is False
 
-    helmert_with_one_parameter = HelmertTranslation(name="anything_really", y=5.0)
+    helmert_with_one_parameter = Helmert3Param(name="anything_really", y=5.0)
     assert helmert_with_one_parameter.can_estimate is False
 
     print(helmert_with_one_parameter.T)
@@ -34,12 +35,12 @@ def test_helmerttranslation_can_estimate():
     assert helmert_with_one_parameter._transformation_parameters_given is True
 
 
-def test_helmerttranslation_as_estimator():
+def test_helmert3param_as_estimator():
     """
     Test parameter estimation
     """
 
-    helmert_with_no_parameters = HelmertTranslation(name="anything_really")
+    helmert_with_no_parameters = Helmert3Param(name="anything_really")
 
     # Let's estimate some parameters...
     source_coordinates = np.zeros(shape=(10, 3))
@@ -49,12 +50,12 @@ def test_helmerttranslation_as_estimator():
         source_coordinates, target_coordinates, weigths, weigths
     )
 
-    # ... , because the HelmertTranslation is just a basic average of the
+    # ... , because the Helmert3Param is just a basic average of the
     # source and target coordinates we can easily predict result
     assert np.prod(helmert_with_no_parameters.T) == 1
 
 
-def test_helmerttranslation_estimation_with_weights():
+def test_helmert3param_estimation_with_weights():
     """
     Test that parameters are estimated correctly when using weights.
     """
@@ -83,7 +84,7 @@ def test_helmerttranslation_estimation_with_weights():
         ]
     )
 
-    helmert = HelmertTranslation()
+    helmert = Helmert3Param()
     helmert.estimate(
         source_coordinates, target_coordinates, source_weights, target_weights
     )
@@ -98,13 +99,13 @@ def test_helmerttranslation_estimation_with_weights():
     assert helmert.T[2] == -(50 + 50) / 2
 
 
-def test_helmerttranslation_as_operator():
+def test_helmert3param_as_operator():
     """
-    Test that HelmertTranslation works as an operator when given parameters.
+    Test that Helmert3Param works as an operator when given parameters.
     """
 
     # A few final tests
-    op = HelmertTranslation(x=3, y=5, z=10)
+    op = Helmert3Param(x=3, y=5, z=10)
 
     # Can we roundtrip the `forward` and `inverse` methods
     source_coordinates = np.zeros(shape=(10, 4))
@@ -119,11 +120,11 @@ def test_helmerttranslation_as_operator():
     assert op.parameters[2] == Parameter("z", 10)
 
 
-def test_helmert_7param_linear_instantiation():
+def test_helmert_7param_instantiation():
     """
-    Basic tests of instantiating the Helmert7ParamLinear class
+    Basic tests of instantiating the Helmert7Param class
     """
-    h7 = Helmert7ParamLinear(
+    h7 = Helmert7Param(
         convention=RotationConvention.COORDINATE_FRAME,
         x=1.0,
         y=1.0,
@@ -134,7 +135,7 @@ def test_helmert_7param_linear_instantiation():
         s=0.005,
     )
 
-    assert isinstance(h7, Helmert7ParamLinear)
+    assert isinstance(h7, Helmert7Param)
     assert h7.x == 1.0
     assert h7.y == 1.0
     assert h7.z == 1.0
@@ -146,18 +147,17 @@ def test_helmert_7param_linear_instantiation():
     assert h7._transformation_parameters_given is True
     assert h7.can_estimate is False
 
-    h7 = Helmert7ParamLinear(convention=RotationConvention.COORDINATE_FRAME)
+    h7 = Helmert7Param(convention=RotationConvention.COORDINATE_FRAME)
 
     assert h7._transformation_parameters_given is False
     assert h7.can_estimate is True
 
 
-def test_helmert7paramlinear_parameters():
-    """Test that Helmert7ParamLinearLinear.parameters returns the correct values."""
+def test_helmert7param_parameters():
+    """Test that Helmert7ParamSmallAngle.parameters returns the correct values."""
 
-    h7 = Helmert7ParamLinear(
+    h7 = Helmert7ParamSmallAngle(
         convention=RotationConvention.COORDINATE_FRAME,
-        test_helmert7param_small_angle_approximation=True,
         x=1.0,
         y=1.0,
         z=1.0,
@@ -184,7 +184,7 @@ def test_helmert7paramlinear_parameters():
     assert h7.parameters[8].name == "approx"
     assert len(h7.parameters) == 9
 
-    h7_2 = Helmert7ParamLinear(
+    h7_2 = Helmert7ParamSmallAngle(
         convention=RotationConvention.POSITION_VECTOR,
         x=1.0,
         rz=0.003,
@@ -203,9 +203,9 @@ def test_helmert7paramlinear_parameters():
 
 
 def test_helmert_7param_transformation(source_coordinates):
-    """Test the forward transformation of Helmert7ParamLinear."""
+    """Test the forward transformation of Helmert7Param."""
 
-    h7 = Helmert7ParamLinear(
+    h7 = Helmert7ParamSmallAngle(
         convention=RotationConvention.COORDINATE_FRAME,
         x=1234.0,
         y=923.0,
@@ -238,9 +238,10 @@ def test_helmert_7param_transformation(source_coordinates):
     assert np.allclose(source_coordinates, roundtrip)
 
 
-def test_helmert7paramlinear_small_angle_approximation():
+def test_helmert7param_small_angle_approximation():
     """
-    Test the rotation matrix with and without the small angles approximation.
+    Test that Helmert7ParamSmallAngle uses small angle approximation and
+    Helmert7Param uses full rotation matrix.
     """
 
     rx = 23.1
@@ -248,18 +249,15 @@ def test_helmert7paramlinear_small_angle_approximation():
     rz = 39.42
 
     # Check that the rotation matrices are different when produced with
-    # and without the small angle approximation. Of course we use sufficiently
-    # large rotations for this to be the case.
-    helmert_small_angle = Helmert7ParamLinear(
+    # Helmert7ParamSmallAngle vs Helmert7Param.
+    helmert_small_angle = Helmert7ParamSmallAngle(
         convention=RotationConvention.POSITION_VECTOR,
-        small_angle_approximation=True,
         rx=rx,
         ry=ry,
         rz=rz,
     )
-    helmert_full = Helmert7ParamLinear(
+    helmert_full = Helmert7Param(
         convention=RotationConvention.POSITION_VECTOR,
-        small_angle_approximation=False,
         rx=rx,
         ry=ry,
         rz=rz,
@@ -267,36 +265,33 @@ def test_helmert7paramlinear_small_angle_approximation():
 
     assert not np.allclose(helmert_small_angle.R, helmert_full.R)
 
-    # Test specific values of rotation matrices, again with and
-    # without the small angles approximation.
-    arcsec2rad: float = lambda arcsec: np.deg2rad(arcsec / 3600.0)
+    # Test specific values of rotation matrices.
+    arcsec2rad_func = lambda arcsec: np.deg2rad(arcsec / 3600.0)
 
-    x_rotation_small_angle = Helmert7ParamLinear(
+    x_rotation_small_angle = Helmert7ParamSmallAngle(
         convention=RotationConvention.POSITION_VECTOR,
-        small_angle_approximation=True,
         rx=rx,
     )
 
-    x_rotation = Helmert7ParamLinear(
+    x_rotation_full = Helmert7Param(
         convention=RotationConvention.POSITION_VECTOR,
-        small_angle_approximation=False,
         rx=rx,
     )
 
-    assert x_rotation_small_angle.R[2][1] == arcsec2rad(rx)
-    assert x_rotation.R[2][1] != arcsec2rad(rx)
+    assert x_rotation_small_angle.R[2][1] == arcsec2rad_func(rx)
+    assert x_rotation_full.R[2][1] != arcsec2rad_func(rx)
 
 
-def test_helmert_7param_linear_estimation(source_coordinates, target_coordinates):
+def test_helmert_7param_small_angle_estimation(source_coordinates, target_coordinates):
     """
-    Verify that estimation of a 7 parameter Helmert works.
+    Verify that estimation of a 7 parameter Helmert using the small angle
+    approximation works.
 
     The test is slightly dumb as it simply checks that transformation of the
     source coordinates somewhat matches the target coordinates.
     """
-    h = Helmert7ParamLinear(
+    h = Helmert7ParamSmallAngle(
         convention=RotationConvention.POSITION_VECTOR,
-        small_angle_approximation=True,
     )
 
     # coordinate arrays contain epochs in the fourth column,
@@ -318,14 +313,13 @@ def test_helmert_7param_linear_estimation(source_coordinates, target_coordinates
     assert estimated_coordinates[-1, 2] == pytest.approx(target_coordinates[-1, 2])
 
 
-def test_helmert_7param_nonlinear_estimation(source_coordinates):
+def test_helmert_7param_full_estimation(source_coordinates):
     """
-    .
+    Test estimation of a 7 parameter Helmert using the full rotation matrix.
     """
 
-    fwd = Helmert7ParamLinear(
+    fwd = Helmert7Param(
         convention=RotationConvention.POSITION_VECTOR,
-        small_angle_approximation=False,
         x=12.423,
         y=-53.153,
         z=231.32,
@@ -336,9 +330,8 @@ def test_helmert_7param_nonlinear_estimation(source_coordinates):
     )
     target_coordinates = fwd.forward(source_coordinates)
 
-    h = Helmert7ParamNonLinear(
+    h = Helmert7Param(
         convention=RotationConvention.POSITION_VECTOR,
-        small_angle_approximation=False,
     )
     print()
 
