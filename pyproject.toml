@@ -81,3 +81,11 @@ source-roots = ['src/transformo']
 
 [tool.pylint.format]
 max-line-length = 88
+
+[tool.pytest.ini_options]
+filterwarnings = [
+    # Using Python 3.14+ with pydantic_yaml 1.6 results in a UserWarning
+    # due to use of Pydantic V1 features. Doesn't seem to affect Transformo,
+    # so we ignore it
+    "ignore::UserWarning:pydantic_yaml._internals.v2",
+]
