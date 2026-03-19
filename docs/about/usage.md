@@ -26,7 +26,7 @@ target_data:
   type: csv
   filename: test/data/dk_cors_etrs89.csv
 operators:
-- type: helmert_translation
+- type: helmert_3param
 presenters:
 - name: PROJ string
   type: proj_presenter

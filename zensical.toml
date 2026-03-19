@@ -24,9 +24,9 @@ Copyright &copy; Nordic Geodetic Commision
     { "Operators" = [
         "operators/index.md",
         "operators/projoperator.md",
-        "operators/helmerttranslation.md",
+        "operators/helmert3param.md",
         "operators/helmert7param.md",
-        "operators/helmert7paramnonlinear.md",
+        "operators/helmert7param_small_angle.md",
     ]},
     { "Presenters" = [
         "presenters/index.md",

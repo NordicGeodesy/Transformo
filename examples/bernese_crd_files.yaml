@@ -23,7 +23,7 @@ target_data:
 
 operators:
 - name: null
-  type: helmert_translation
+  type: helmert_3param
 
 presenters:
 - type: coordinate_presenter

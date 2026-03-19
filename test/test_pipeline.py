@@ -9,7 +9,7 @@ import pytest
 
 from transformo.datasources import CsvDataSource, DataSource
 from transformo.datatypes import Coordinate
-from transformo.operators import DummyOperator, HelmertTranslation
+from transformo.operators import DummyOperator, Helmert3Param
 from transformo.pipeline import Pipeline
 from transformo.presenters import CoordinatePresenter, DummyPresenter, PROJPresenter
 
@@ -84,8 +84,8 @@ def test_pipeline_estimation_using_helmert_translation() -> None:
     source = DataSource(coordinates=src_coords)
     target = DataSource(coordinates=tgt_coords)
 
-    helmert_transformation = HelmertTranslation(y=150)
-    helmert_estimation = HelmertTranslation()
+    helmert_transformation = Helmert3Param(y=150)
+    helmert_estimation = Helmert3Param()
 
     pipeline = Pipeline(
         source_data=[source],
@@ -106,7 +106,7 @@ def test_pipeline_access() -> None:
     Test the intermediate results of a pipeline process.
 
     A pipeline of two steps is defined, the first is a transformation and the
-    second is an estimation operation. Both are based on the HelmertTranslation
+    second is an estimation operation. Both are based on the Helmert3Param
     as it's simple nature makes it easy to calculate the expected results
     beforehand. Here only one set of source/target coordinates is given which
     in turn simplifies the Helmert Operations to addition and subtraction between
@@ -120,8 +120,8 @@ def test_pipeline_access() -> None:
     source = DataSource(coordinates=src_coords)
     target = DataSource(coordinates=tgt_coords)
 
-    helmert_transformation = HelmertTranslation(y=150)
-    helmert_estimation = HelmertTranslation()
+    helmert_transformation = Helmert3Param(y=150)
+    helmert_estimation = Helmert3Param()
 
     pipeline = Pipeline(
         source_data=[source],
@@ -171,7 +171,7 @@ def test_pipeline_results_as_markdown(files: dict) -> None:
     pipeline = Pipeline(
         source_data=[CsvDataSource(filename=files["dk_cors_itrf2014.csv"])],
         target_data=[CsvDataSource(filename=files["dk_cors_etrs89.csv"])],
-        operators=[HelmertTranslation()],
+        operators=[Helmert3Param()],
         presenters=[PROJPresenter(), CoordinatePresenter()],
     )
 
@@ -184,7 +184,7 @@ def test_pipeline_results_as_markdown(files: dict) -> None:
     assert markdown.splitlines()[1].startswith("*Created with Transformo version")
     assert markdown.splitlines()[3] == "## proj_presenter"
     assert markdown.splitlines()[16].startswith("|Station|      x       |")
-    assert markdown.splitlines()[29].startswith("### Step 1: HelmertTranslation(x")
+    assert markdown.splitlines()[29].startswith("### Step 1: Helmert3Param(x")
 
 
 def test_pipeline_results_as_json(files: dict) -> None:
@@ -196,7 +196,7 @@ def test_pipeline_results_as_json(files: dict) -> None:
     pipeline = Pipeline(
         source_data=[CsvDataSource(filename=files["dk_cors_itrf2014.csv"])],
         target_data=[CsvDataSource(filename=files["dk_cors_etrs89.csv"])],
-        operators=[HelmertTranslation()],
+        operators=[Helmert3Param()],
         presenters=[
             PROJPresenter(name="PROJ"),
             CoordinatePresenter(name="Coordinates"),

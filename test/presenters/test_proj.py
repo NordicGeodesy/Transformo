@@ -2,7 +2,7 @@
 Tests for transformo.presenters.proj
 """
 
-from transformo.operators import DummyOperator, HelmertTranslation, ProjOperator
+from transformo.operators import DummyOperator, Helmert3Param, ProjOperator
 from transformo.presenters import PROJPresenter
 
 
@@ -13,9 +13,9 @@ def test_proj_presenter():
 
     # Operators
     dummy = DummyOperator()
-    helmert = HelmertTranslation()
-    helmert_with_params = HelmertTranslation(x=3.42, y=534.533, z=1234.5678)
-    helmert_with_one_params = HelmertTranslation(y=432.52)
+    helmert = Helmert3Param()
+    helmert_with_params = Helmert3Param(x=3.42, y=534.533, z=1234.5678)
+    helmert_with_one_params = Helmert3Param(y=432.52)
     proj_with_pipeline = ProjOperator(
         proj_string="+proj=pipeline +step +proj=cart +inv +step +proj=utm +zone=32"
     )

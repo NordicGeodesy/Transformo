@@ -41,7 +41,7 @@ def _float(f: float | None) -> float:
     return float(f)
 
 
-class HelmertTranslation(Operator):
+class Helmert3Param(Operator):
     """
     The 3 paramter Helmert transformation is a simple translation in the three
     principal directions of a earth-centered, earth-fixed coordinate system (or
@@ -54,7 +54,7 @@ class HelmertTranslation(Operator):
     using this class.
     """
 
-    type: Literal["helmert_translation"] = "helmert_translation"
+    type: Literal["helmert_3param"] = "helmert_3param"
 
     # Parameters
     x: Optional[float] = float("nan")
@@ -70,12 +70,12 @@ class HelmertTranslation(Operator):
         self._sanitize_parameters()
         # ... from now on we can rely on parameters being useful
 
-    def _has_transformation_parameters_been_given(self):
+    def _has_transformation_parameters_been_given(self) -> None:
         """
         Part of the __init__ process. Supports Operator.can_estimate
 
         This exist as its own method so it can be overridden in a classes
-        inheriting from HelmertTranslation.
+        inheriting from Helmert3Param.
         """
         # if one or more parameter is given at instantiation time
         if not _isnan(self.x) or not _isnan(self.y) or not _isnan(self.z):
@@ -219,8 +219,10 @@ def R3(rz: float) -> Matrix:
             [      0,        0, 1],
         ]
     )
+# fmt: on
 
-class Helmert7ParamLinear(HelmertTranslation):
+
+class Helmert7ParamBase(Helmert3Param):
     """
     The 7 paramter Helmert transformation performs a translation in the three
     principal directions of a earth-centered, earth-fixed coordinate system (or
@@ -237,16 +239,18 @@ class Helmert7ParamLinear(HelmertTranslation):
     estimated, resulting in three translations, three rotations and a scale factor.
     """
 
-    # mypy will complain since Helmert7Param defines this as
-    # a Literal["helmert_7param"], so we have it look the other
+    # mypy will complain since Helmert7ParamBase defines this as
+    # a Literal["helmert_7param_base"], so we have it look the other
     # way for a brief moment when checking the types.
     if TYPE_CHECKING:
-        type: Any = "helmert_7param_linear"
+        type: Any = "helmert_7param_base"
     else:
-        type: Literal["helmert_7param_linear"] = "helmert_7param_linear"
+        type: Literal["helmert_7param_base"] = "helmert_7param_base"
 
     convention: RotationConvention
-    small_angle_approximation: bool = True
+
+    # Internal flag for rotation matrix computation
+    _small_angle_approximation: bool = False
 
     # Rotation parameters - given in arc seconds
     rx: Optional[float] = float("nan")
@@ -259,12 +263,11 @@ class Helmert7ParamLinear(HelmertTranslation):
     def __init__(self, convention: RotationConvention, **kwargs) -> None:
         super().__init__(convention=convention, **kwargs)
 
-    def _has_transformation_parameters_been_given(self):
+    def _has_transformation_parameters_been_given(self) -> None:
+        super()._has_transformation_parameters_been_given()
+
         # if one or more parameter is given at instantiation time
         parameters_instantiated = [
-            not _isnan(self.x),
-            not _isnan(self.y),
-            not _isnan(self.z),
             not _isnan(self.rx),
             not _isnan(self.ry),
             not _isnan(self.rz),
@@ -306,7 +309,7 @@ class Helmert7ParamLinear(HelmertTranslation):
             params.append(Parameter("s", _float(self.s)))
 
         params.append(Parameter("convention", self.convention.value))
-        if self.small_angle_approximation:
+        if self._small_angle_approximation:
             params.append(Parameter("approx"))
 
         return params
@@ -317,11 +320,11 @@ class Helmert7ParamLinear(HelmertTranslation):
         Rotation matrix.
         """
 
-        rx = arcsec2rad(self.rx)
-        ry = arcsec2rad(self.ry)
-        rz = arcsec2rad(self.rz)
+        rx = arcsec2rad(_float(self.rx))
+        ry = arcsec2rad(_float(self.ry))
+        rz = arcsec2rad(_float(self.rz))
 
-        if self.small_angle_approximation:
+        if self._small_angle_approximation:
             rotation_matrix = np.array(
                 [
                     [1, -rz, ry],
@@ -368,6 +371,37 @@ class Helmert7ParamLinear(HelmertTranslation):
 
         return coords
 
+
+class Helmert7ParamSmallAngle(Helmert7ParamBase):
+    """
+    The 7 paramter Helmert transformation with parameter estimation using the
+    small angle approximation for the rotation matrix.
+
+    A coordinate in vector Va is transformed into vector Vb using the expression
+    below:
+
+        Vb = T + (1+s*10^-6) * R * Va
+
+    Where T consist of the three translation parameters, s is the scaling factor
+    and R is a rotation matrix. The principal components of T, s and R can be
+    estimated, resulting in three translations, three rotations and a scale factor.
+
+    Similar to `Helmert7Param` in functionality but the parameter
+    estimation is done using the small angle approximation for the rotation
+    matrix. This results in a linear estimation problem that can be solved
+    in a single step using standard least squares techniques.
+    """
+
+    # mypy will complain since Helmert7ParamSmallAngle defines this as
+    # a Literal["helmert_7param_small_angle"], so we have it look the other
+    # way for a brief moment when checking the types.
+    if TYPE_CHECKING:
+        type: Any = "helmert_7param_small_angle"
+    else:
+        type: Literal["helmert_7param_small_angle"] = "helmert_7param_small_angle"
+
+    _small_angle_approximation: bool = True
+
     def estimate(
         self,
         source_coordinates: CoordinateMatrix,
@@ -377,6 +411,11 @@ class Helmert7ParamLinear(HelmertTranslation):
     ) -> None:
         """
         Estimate parameters using small angle approximation.
+
+        This method uses the small angle approximation for the rotation matrix,
+        which linearizes the estimation problem. The design matrix is constructed
+        using the antisymmetric matrix of the source coordinates, which is valid
+        for small rotation angles.
         """
 
         # Build design matrix
@@ -425,12 +464,10 @@ class Helmert7ParamLinear(HelmertTranslation):
         self.rz = rad2arcsec(beta[6] / k)
 
 
-class Helmert7ParamNonLinear(Helmert7ParamLinear):
+class Helmert7Param(Helmert7ParamBase):
     """
-    The 7 paramter Helmert transformation performs a translation in the three
-    principal directions of a earth-centered, earth-fixed coordinate system (or
-    a similarly shaped celestial body), as well as rotations around those axes
-    and a scaling of the coordinates.
+    The 7 paramter Helmert transformation with parameter estimation using the
+    full rotation matrix (no small angle approximation).
 
     A coordinate in vector Va is transformed into vector Vb using the expression
     below:
@@ -441,7 +478,7 @@ class Helmert7ParamNonLinear(Helmert7ParamLinear):
     and R is a rotation matrix. The principal components of T, s and R can be
     estimated, resulting in three translations, three rotations and a scale factor.
 
-    Similar to `Helmert7ParamLinear` in most functionality but the parameter
+    Similar to `Helmert7ParamSmallAngle` in functionality but the parameter
     estimation is different. Here estimation of the parameters is done using the
     full rotation matrix which makes the inversion a non-linear problem. The
     inversion is done using an iterative approach.
@@ -451,9 +488,9 @@ class Helmert7ParamNonLinear(Helmert7ParamLinear):
     # a Literal["helmert_7param"], so we have it look the other
     # way for a brief moment when checking the types.
     if TYPE_CHECKING:
-        type: Any = "helmert_7param_nonlinear"
+        type: Any = "helmert_7param"
     else:
-        type: Literal["helmert_7param_nonlinear"] = "helmert_7param_nonlinear"
+        type: Literal["helmert_7param"] = "helmert_7param"
 
     def estimate(
         self,

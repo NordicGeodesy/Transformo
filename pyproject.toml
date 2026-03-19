@@ -46,6 +46,7 @@ dev = [
     'isort',
     'zensical',
     'markdown-exec',
+    'markupsafe',
 ]
 
 [project.scripts]

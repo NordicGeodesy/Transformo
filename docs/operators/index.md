@@ -28,7 +28,7 @@ operators:
   proj_string: +proj=helmert +x=1000
 
 - name: Estimate offset in x axis
-  type: helmert_translation
+  type: helmert_3param
 ...
 ```
 
