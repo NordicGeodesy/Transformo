@@ -1,0 +1,43 @@
+# Demonstrate use of a gravsoft operator.
+
+source_data:
+- name: some source data that are not used for anything!
+  type: csv
+  filename: test/data/dk_cors_itrf2014.csv
+
+target_data:
+- name: some target data that are not used for anything!
+  type: csv
+  filename: test/data/dk_cors_etrs89.csv
+
+operators:
+- name: Gravsoft operator that demonstrates how the DVR90(2023) geoid model was fitted
+  type: gravsoft_operator
+
+  # Gravsoft can't handle absolute paths to the gnss-levelling file...
+  # ... So we just use relative paths for everything
+  # Because of this, this example only works if run from the Transformo installation's root directory!
+  gravimetric_geoid_file: test/data/gravsoft_data/gravgeoid2023.gri
+  gnsslevelling_file: test/data/gravsoft_data/143_isl_rettelser_v01.n
+
+  # This is the only output file we can control. But, Gravsoft always puts its other
+  # output files in the current dir, so we just this file in current dir as well
+  transformed_geoid_file: fitted_geoid.gri
+  x_half: 60
+  stddev_minimum: 0.005
+  grid_extent: 53.5000 58.00 7.0000 17.000020  0.010 0.0166667
+
+  # Instead of all the above input params, we can also just give the raw input string
+  fitgeoid_input_string: |
+    test/data/gravsoft_data/gravgeoid2023.gri
+    test/data/gravsoft_data/143_isl_rettelser_v01.n
+    fitted_geoid.gri
+    25 1 1 t
+    60 0.005
+    53.5000 58.00 7.0000 17.000020  0.010 0.0166667
+
+  outdir: examples/gravsoft_operator_outdir/
+
+presenters:
+- type: dummy_presenter
+  name: The gravsoft operator has nothing to present!

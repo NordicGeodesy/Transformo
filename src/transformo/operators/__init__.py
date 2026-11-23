@@ -18,6 +18,7 @@ from .helmert import (
     RotationConvention,
 )
 from .proj import ProjOperator
+from .gravsoft_wrapper import GravsoftOperator
 
 __all__ = [
     "Operator",
@@ -27,6 +28,7 @@ __all__ = [
     "Helmert7ParamSmallAngle",
     "RotationConvention",
     "ProjOperator",
+    "GravsoftOperator",
 ]
 
 
